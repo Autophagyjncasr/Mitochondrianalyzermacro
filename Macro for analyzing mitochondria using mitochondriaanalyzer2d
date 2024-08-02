@@ -1,0 +1,75 @@
+path_name = "E:/"
+excelFile = "1_03_R3D_D3D.dv"
+DV = ".dv"
+ImgFile = replace(excelFile, DV, "");
+fname = path_name + excelFile ;
+
+
+J_one = "C1-" ;
+J_two = "C2-" ;
+J_three="C3-" ;
+
+
+Channel_one_combined_name = J_one + fname ;
+Channel_two_combined_name = J_two + fname ;
+Channel_three_combined_name = J_three+ fname ;
+
+// USING BIOFORMATS TO OPEN THE fname
+
+run("Bio-Formats", "open=[" + fname + "] autoscale color_mode=Composite view=Hyperstack stack_order=XYCZT");
+
+
+/////////////////////////CHECK HOW MANY Z STACKS YOU NEED FOR ANALYSIS/////////////////////
+z_stack_start = 5; // Enter the starting slice number
+z_stack_end = 9; // Enter the ending slice number
+
+// Set the current position to the desired z-stack range
+setSlice(z_stack_start);
+
+// Make Subset for the specified z-stack range
+run("Make Subset...", "channels=1-3 slices=" + z_stack_start + "-" + z_stack_end);
+
+
+// SPLITTING THE CHANNELS IN fname/////////////////////////////////////////////////////////
+selectWindow(fname)
+run("Split Channels"); 
+selectWindow(Channel_one_combined_name) 
+// RENAMING THE IMAGE
+rename("FarRed")
+run("8-bit") ;
+run("Subtract Background...", "rolling=50 stack");
+////////*****************************//////////
+selectWindow(Channel_two_combined_name) 
+// RENAMING THE IMAGE
+rename("Red")
+run("8-bit") ;
+//run("Subtract Background...", "rolling=50 stack");
+selectWindow(Channel_three_combined_name) 
+// RENAMING THE IMAGE
+rename("Green")
+run("8-bit") ;
+run("Subtract Background...", "rolling=50 stack");
+
+
+selectWindow("FarRed")
+//run("Z Project...", "projection=[Max Intensity]");
+run("Brightness/Contrast...");
+
+waitForUser("Adjust Brightness Contrast To Better Visualise The Image, click OK.");
+selectWindow("Green");
+setTool("rectangle");
+
+// Prompt the user to draw the freehand ROI manually
+waitForUser("Switch to the rectangle tool in the toolbar and draw the ROI manually./nAfter drawing, click OK.");
+run("Add to Manager");
+roiManager("Select", 0);
+run("Crop");
+close("Red");
+close("FarRed");
+selectWindow("Green")
+run("Z Project...", "projection=[Max Intensity]");
+selectImage("MAX_Green");
+run("2D Threshold", "subtract rolling=1.25 sigma radius=1.49 enhance max=1.80 adjust gamma=0.80 method=[Weighted Mean] block=1.250 c-value=5 despeckle remove outlier=1.5 automatically");
+run("Close All");
+close("Mitochondrial Analyzer");
+close("ROI Manager");
